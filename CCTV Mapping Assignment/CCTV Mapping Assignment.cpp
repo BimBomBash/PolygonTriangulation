@@ -9,6 +9,7 @@
 #include <list>
 #include "Window.h"
 #include "Polygon.h"
+#include "BinarySearchTree.h"
 #include <queue>
 
 const double PI = 3.1415926535897932384626433832795;
@@ -19,6 +20,7 @@ Polygon *polygon;
 Window *window;
 int edgeNumber = 0;
 std::priority_queue < Vertex*, std::vector<Vertex*>, OrderByVerticesY > verticesQueue;
+BinaryTree binarySearchTree;
 
 void InitPolygon() {
 	polygon = new Polygon(edges);
@@ -62,8 +64,10 @@ void RotatePolygon() {
 	}while (iter != polygon->Start());
 }
 
+//Set START, END, MERGE, SPLIT and add key to each edges and verices
 void SetVertexType() {
 	Edge *iter = polygon->edges;
+	int key = 0;
 	do {
 		if (iter->prev->origin->y < iter->origin->y && iter->next->origin->y < iter->origin->y) {
 			if (iter->prev->origin->x < iter->next->origin->x) {
@@ -82,6 +86,9 @@ void SetVertexType() {
 		else {
 			iter->origin->type = REGULAR;
 		}
+		iter->key = key;
+		iter->origin->key = key;
+		key++;
 		iter = iter->next;
 	} while (iter != polygon->Start());
 }
@@ -92,19 +99,19 @@ void PrintVerticesType() {
 		switch (iter->origin->type)
 		{
 		case START:
-			std::cout << "START" << std::endl;
+			std::cout << "Edge " << iter->key << ": " << "START" << std::endl;
 			break;
 		case END:
-			std::cout << "END" << std::endl;
+			std::cout << "Edge " << iter->key << ": " << "END" << std::endl;
 			break;
 		case MERGE:
-			std::cout << "MERGE" << std::endl;
+			std::cout << "Edge " << iter->key << ": " << "MERGE" << std::endl;
 			break;
 		case SPLIT:
-			std::cout << "SPLIT" << std::endl;
+			std::cout << "Edge " << iter->key << ": " << "SPLIT" << std::endl;
 			break;
 		case REGULAR:
-			std::cout << "REGULAR" << std::endl;
+			std::cout << "Edge " << iter->key << ": " << "REGULAR" << std::endl;
 			break;
 		};
 		iter = iter->next;
@@ -132,6 +139,43 @@ void PrintVerticesQueue() {
 	}
 }
 
+void HandleStartVertex(Vertex *_vertex) {
+	binarySearchTree.insert(_vertex->incidentEdge);
+}
+
+void HandleEndVertex(Vertex *_vertex) {}
+
+void HandleSplitVertex(Vertex *_vertex) {}
+
+void HandleMergeVertex(Vertex *_vertex) {}
+
+void HandleRegularVertex(Vertex *_vertex) {}
+
+void MakeMonotone() {
+	while (!verticesQueue.empty()) {
+		Vertex *temp = verticesQueue.top();
+		switch (temp->type)
+		{
+		case START:
+			HandleStartVertex(temp);
+			break;
+		case END:
+			HandleEndVertex(temp);
+			break;
+		case MERGE:
+			HandleMergeVertex(temp);
+			break;
+		case SPLIT:
+			HandleSplitVertex(temp);
+			break;
+		case REGULAR:
+			HandleRegularVertex(temp);
+			break;
+		};
+		verticesQueue.pop();
+	};
+}
+
 int main(int argc, char **argv)
 {
 	window =  new Window ("CCTV", 600, 400);
@@ -154,6 +198,9 @@ int main(int argc, char **argv)
 		} while (iter != polygon->Start());
 		window->SwapWindow();
 	}
+
+	MakeMonotone();
+
 	while (true) {};
     return 0;
 }

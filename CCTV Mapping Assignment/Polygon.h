@@ -10,6 +10,7 @@ struct Vertex {
 	Edge *incidentEdge;
 	void Print();
 	VertexType type;
+	int key;
 };
 
 struct Edge {
@@ -20,6 +21,7 @@ struct Edge {
 	Polygon *incidentFace;
 	Edge(float xOrigin, float yOrigin, Polygon *_incidentFace);
 	void Print();
+	int key;
 };
 
 class Polygon
