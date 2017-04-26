@@ -163,6 +163,8 @@ AppPackages/
 !*.[Cc]ache/
 
 # Others
+*.VC.opendb 
+*.VC.db 
 ClientBin/
 [Ss]tyle[Cc]op.*
 ~$*

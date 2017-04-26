@@ -3,15 +3,44 @@
 #include <list>
 #include "Polygon.h"
 
-
-Polygon::Polygon(std::list<Vertex *>&_vertices)
+int Polygon::Length()
 {
-	vertices = _vertices;
-	Vertex* prev = vertices.back();
-	for (auto iter = vertices.begin(); iter != vertices.end(); ++iter) {
-		lines.push_back(new Line(prev, *iter));
-		prev = *iter;
+	return length;
+}
+
+Edge * Polygon::Start()
+{
+	return edges;
+}
+
+Edge * Polygon::End()
+{
+	return edges->prev;
+}
+
+void Polygon::Push_Back(Edge * edge)
+{
+	Edge *iter = edges;
+	if (iter == nullptr) {
+		edges = edge;
+		edges->prev = edges;
+		edges->next = edges;
 	}
+	else {
+		while (iter->next != edges) {
+			iter = iter->next;
+		}
+		iter->next = edge;
+		edge->prev = iter;
+		edges->prev = edge;
+		edges->prev->next = edges;
+	}
+	length++;
+}
+
+Polygon::Polygon(Edge * _edges)
+{
+	edges = _edges;
 }
 
 Polygon::~Polygon()
@@ -20,40 +49,31 @@ Polygon::~Polygon()
 
 void Polygon::Print()
 {
-	for (auto iter = vertices.begin(); iter != vertices.end(); ++iter) {
-		(*iter)->Print();
-	}
-	for (auto iter = lines.begin(); iter != lines.end(); ++iter) {
-		(*iter)->Print();
-	}
+	Edge *iter = edges;
+	do {
+		iter->origin->Print();
+		iter->Print();
+		iter = iter->next;
+	} while (iter != edges);
 }
 
-Line::Line(Vertex *_a, Vertex *_b)
+Edge::Edge(float xOrigin, float yOrigin, Polygon * _incidentFace)
 {
-	a = _a;
-	b = _b;
-	a->next = b;
-	b->prev = a;
+	origin = new Vertex(xOrigin, yOrigin, this);
+	incidentFace = _incidentFace;
 }
 
-Line::Line(float x1, float y1, float x2, float y2)
+void Edge::Print()
 {
-	a = new Vertex(x1, y1);
-	b = new Vertex(x2, y2);
-
-	a->next = b;
-	b->prev = a;
+	std::cout << "(" << origin->x << ", " << origin->y << "), (" << next->origin->x << ", " << next->origin->y << ")" << std::endl;
 }
 
-void Line::Print()
-{
-	std::cout << "(" << a->x << ", " << a->y << "), (" << b->x << ", " << b->y << ")" << std::endl;                                                                                                                                                            
-}
 
-Vertex::Vertex(float _x, float _y)
+Vertex::Vertex(float _x, float _y, Edge * _incidentEdge)
 {
 	x = _x;
 	y = _y;
+	incidentEdge = _incidentEdge;
 }
 
 void Vertex::Print()
