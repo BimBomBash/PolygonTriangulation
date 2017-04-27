@@ -200,35 +200,6 @@ void InsertSplitter(Vertex *_source, Edge *_target) {
 	splitterTarget.push_back(_target);
 }
 
-void SplitPolygon(Vertex *_source, Edge *_target) {
-	Polygon *oldPolygon = _target->incidentFace;
-	Polygon *newPolygon = new Polygon();
-	Edge *sourceEdge = new Edge(_source, newPolygon);
-	Edge *sourceTwin = new Edge(_target->origin, oldPolygon);
-	sourceTwin->prev = _target->prev;
-	_target->prev->next = sourceTwin;
-	sourceTwin->next = _source->incidentEdge->prev->next;
-
-	sourceEdge->next = _target;
-	sourceEdge->prev = _source->incidentEdge->prev;
-	_target->prev = sourceEdge;
-	sourceEdge->prev->next = sourceEdge;
-	newPolygon->edges = sourceEdge;
-
-	sourceEdge->origin->incidentEdge = sourceEdge;
-	sourceTwin->origin->incidentEdge = sourceTwin;
-
-	Edge *temp = sourceEdge;
-	do {
-		if (temp == oldPolygon->edges) edges = sourceTwin;
-		temp->incidentFace = newPolygon;
-		temp = temp->next;
-	} while (temp != sourceEdge);
-
-	newPolygon->edges = sourceEdge;
-	monotones.push_back(newPolygon);
-}
-
 void HandleStartVertex(Vertex *_vertex) {
 	InsertToFakeTree(_vertex->incidentEdge, _vertex);
 }
@@ -309,41 +280,80 @@ void MakeMonotone() {
 	};
 }
 
+void InsertPolygon(Polygon *polygon) {
+	for (int i = 0; i < monotones.size(); i++) {
+		if (monotones[i] == polygon) return;
+	}
+	monotones.push_back(polygon);
+}
+
+void PolygonSplitter(Vertex *_source, Edge *_target) {
+	Polygon *newPolygon = new Polygon();
+	Edge *sourceEdge = new Edge(_source, polygon);
+	Edge *sourceTwin = new Edge(_target->origin, newPolygon);
+	sourceTwin->prev = _target->prev;
+	_target->prev->next = sourceTwin;
+	sourceTwin->next = _source->incidentEdge->prev->next;
+
+	sourceEdge->next = _target;
+	sourceEdge->prev = _source->incidentEdge->prev;
+	_target->prev = sourceEdge;
+	sourceEdge->prev->next = sourceEdge;
+	newPolygon->edges = sourceEdge;
+
+	sourceEdge->origin->incidentEdge = sourceEdge;
+	sourceTwin->origin->incidentEdge = sourceTwin;
+
+	Edge *temp = sourceTwin;
+	do {
+		if (temp == polygon->edges) polygon->edges = sourceEdge;
+		temp->incidentFace = newPolygon;
+		temp = temp->next;
+	} while (temp != sourceTwin);
+
+	newPolygon->edges = sourceTwin;
+	InsertPolygon(newPolygon);
+}
+
+void SplitPolygon() {
+	for (int i = 0; i < splitterSource.size(); i++) {
+		splitterSource[i]->Print();
+		PolygonSplitter(splitterSource[i], splitterTarget[i]);
+	}
+	InsertPolygon(polygon);
+}
 
 int main(int argc, char **argv)
 {
-	window =  new Window ("CCTV", 600, 400);
-	
+	window = new Window("CCTV", 600, 400);
+
 	InitPolygon();
 	if (polygon->edges == nullptr)printf("NULLPTR");
-	
 	RotatePolygon();
+
 	SetVertexType();
-	//PrintVerticesType();
-	//polygon->Print();
-	
 	InitVerticesQueue();
-
 	MakeMonotone();
+	SplitPolygon();
 
-	//for (int i = 0; i < splitterSource.size(); i++) {
-		//SplitPolygon(splitterSource[i], splitterTarget[i]);
-	//}
-	
 	if (window->initiated) {
 		window->ClearWindow();
-		Edge *iter = polygon->edges;
-		do {
-			PrintLine(iter);
-			iter = iter->next;
-		} while (iter != polygon->Start());
-		for (int i = 0; i < splitterSource.size(); i++) {
-			Edge *temp = new Edge(splitterSource[i], new Polygon());
-			temp->next = splitterTarget[i];
-			PrintLine(temp);
+		for (int i = 0; i < monotones.size(); i++) {
+			Edge *iter = monotones[i]->edges;
+			do {
+				PrintLine(iter);
+				iter = iter->next;
+			} while (iter != monotones[i]->Start());
+			/*for (int i = 0; i < splitterSource.size(); i++) {
+				Edge *temp = new Edge(splitterSource[i], new Polygon());
+				temp->next = splitterTarget[i];
+				PrintLine(temp);
+			}*/
 		}
 		window->SwapWindow();
 	}
+
+	std::cout << monotones.size();
 
 	while (true) {};
     return 0;

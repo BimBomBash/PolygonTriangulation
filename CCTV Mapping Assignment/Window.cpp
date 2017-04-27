@@ -39,7 +39,6 @@ void Window::DrawLine(float x1, float y1, float x2, float y2)
 	glVertex2f(x1*xMultiplier, y1*yMultiplier);
 	glVertex2f(x2*xMultiplier, y2*yMultiplier);
 	glEnd();
-
 }
 
 void Window::SwapWindow()
