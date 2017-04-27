@@ -63,6 +63,12 @@ Edge::Edge(float xOrigin, float yOrigin, Polygon * _incidentFace)
 	incidentFace = _incidentFace;
 }
 
+Edge::Edge(Vertex * _origin, Polygon * _incidentFace)
+{
+	origin = _origin;
+	incidentFace = _incidentFace;
+}
+
 void Edge::Print()
 {
 	std::cout << "(" << origin->x << ", " << origin->y << "), (" << next->origin->x << ", " << next->origin->y << ")" << std::endl;

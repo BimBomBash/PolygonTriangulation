@@ -6,6 +6,7 @@ struct Node
 	float edgeXPos;
 	Node *left;
 	Node *right;
+	Node() {}
 };
 
 class BinaryTree
@@ -21,6 +22,7 @@ public:
 private:
 	void destroy_tree(Node *leaf);
 	void insert(float key, Edge *edge, Node *leaf);
+	void Delete(Node *leaf);
 	Node *search(float key, Edge *edge, Node *leaf);
 
 	Node *root;

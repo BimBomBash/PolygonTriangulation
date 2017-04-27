@@ -20,6 +20,7 @@ struct Edge {
 	Edge *prev;
 	Polygon *incidentFace;
 	Edge(float xOrigin, float yOrigin, Polygon *_incidentFace);
+	Edge(Vertex *_origin, Polygon*_incidentFace);
 	void Print();
 	int key;
 };
@@ -36,6 +37,7 @@ public:
 
 	void Push_Back(Edge *edge);
 	Polygon(Edge *_edges);
+	Polygon() {}
 	~Polygon();
 	void Print(); 
 };

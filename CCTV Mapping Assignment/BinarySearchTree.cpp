@@ -74,7 +74,7 @@ void BinaryTree::insert(float key, Edge *edge, Node *leaf)
 Node * BinaryTree::search(float key, Edge *edge, Node *leaf)
 {
 	if (leaf != nullptr) {
-		if (key == leaf->edgeXPos) {
+		if (key == leaf->edgeXPos || edge == leaf->edge) {
 			return leaf;
 		}
 		if (key < leaf->edgeXPos) {
@@ -87,3 +87,35 @@ Node * BinaryTree::search(float key, Edge *edge, Node *leaf)
 	else return nullptr;
 }
 
+void BinaryTree::Delete(Node *leaf)
+{
+	//delete no child, one child, two child
+	if (leaf->left == nullptr && leaf->right == nullptr) {
+		delete leaf;
+	}
+	/*if (leaf->left->left != nullptr && leaf->left->right != nullptr) {
+		Node *temp = traverseMinimum(leaf->left);
+		temp->left = leaf->left->left;
+		temp->right = leaf->left->right;
+		leaf->left = temp;
+	}*/
+	else {
+		if (leaf->left->left != nullptr) leaf->left = leaf->left->left;
+		else leaf->left = leaf->left->right;
+	}
+}
+
+Node * traverseMinimum(Node *node) {
+	Node *temp = node;
+	while (temp->right->right != nullptr) {
+		temp = temp->right;
+	}
+
+	if (temp->left != nullptr) { 
+		if (temp->left < temp->right && temp->left->left == nullptr && temp->left->right == nullptr);
+		return temp; }
+	else {
+		return temp;
+	}
+
+}

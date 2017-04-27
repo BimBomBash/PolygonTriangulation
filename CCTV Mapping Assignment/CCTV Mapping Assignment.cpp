@@ -11,6 +11,7 @@
 #include "Polygon.h"
 #include "BinarySearchTree.h"
 #include <queue>
+#include <vector>
 
 const double PI = 3.1415926535897932384626433832795;
 const float scale = 10.0f;
@@ -21,36 +22,40 @@ Window *window;
 int edgeNumber = 0;
 std::priority_queue < Vertex*, std::vector<Vertex*>, OrderByVerticesY > verticesQueue;
 BinaryTree binarySearchTree;
+std::vector<Node*>fakeTree;
+std::vector<Vertex*>splitterSource;
+std::vector<Edge*>splitterTarget;
+std::vector<Polygon*> monotones;
 
 void InitPolygon() {
 	polygon = new Polygon(edges);
 
 	polygon->Push_Back(new Edge(-10.0f, -4.0f, polygon));
-	polygon->Push_Back(new Edge(-10.0f, 0.0f, polygon));
-	polygon->Push_Back(new Edge(-6.0f, 0.0f, polygon));
-	polygon->Push_Back(new Edge(-6.0f, 1.0f, polygon));
-	polygon->Push_Back(new Edge(-10.0f, 1.0f, polygon));
-	polygon->Push_Back(new Edge(-10.0f, 5.0f, polygon));
-	polygon->Push_Back(new Edge(-4.0f, 5.0f, polygon));
-	polygon->Push_Back(new Edge(-4.0f, 0.0f, polygon));
-	polygon->Push_Back(new Edge(-3.0f, 0.0f, polygon));
-	polygon->Push_Back(new Edge(-3.0f, 5.0f, polygon));
-	polygon->Push_Back(new Edge(4.0f, 5.0f, polygon));
-	polygon->Push_Back(new Edge(4.0f, 1.0f, polygon));
-	polygon->Push_Back(new Edge(-1.0f, 1.0f, polygon));
-	polygon->Push_Back(new Edge(-1.0f, 0.0f, polygon));
-	polygon->Push_Back(new Edge(5.0f, 0.0f, polygon));
-	polygon->Push_Back(new Edge(5.0f, 5.0f, polygon));
-	polygon->Push_Back(new Edge(10.0f, 5.0f, polygon));
-	polygon->Push_Back(new Edge(10.0f, -5.0f, polygon));
-	polygon->Push_Back(new Edge(5.0f, -5.0f, polygon));
-	polygon->Push_Back(new Edge(5.0f, -4.0f, polygon));
-	polygon->Push_Back(new Edge(2.0f, -4.0f, polygon));
-	polygon->Push_Back(new Edge(2.0f, -5.0f, polygon));
-	polygon->Push_Back(new Edge(-6.0f, -5.0f, polygon));
-	polygon->Push_Back(new Edge(-6.0f, -2.0f, polygon));
-	polygon->Push_Back(new Edge(-7.0f, -2.0f, polygon));
 	polygon->Push_Back(new Edge(-7.0f, -4.0f, polygon));
+	polygon->Push_Back(new Edge(-7.0f, -2.0f, polygon));
+	polygon->Push_Back(new Edge(-6.0f, -2.0f, polygon));
+	polygon->Push_Back(new Edge(-6.0f, -5.0f, polygon));
+	polygon->Push_Back(new Edge(2.0f, -5.0f, polygon));
+	polygon->Push_Back(new Edge(2.0f, -4.0f, polygon));
+	polygon->Push_Back(new Edge(5.0f, -4.0f, polygon));
+	polygon->Push_Back(new Edge(5.0f, -5.0f, polygon));
+	polygon->Push_Back(new Edge(10.0f, -5.0f, polygon));
+	polygon->Push_Back(new Edge(10.0f, 5.0f, polygon));
+	polygon->Push_Back(new Edge(5.0f, 5.0f, polygon));
+	polygon->Push_Back(new Edge(5.0f, 0.0f, polygon));
+	polygon->Push_Back(new Edge(-1.0f, 0.0f, polygon));
+	polygon->Push_Back(new Edge(-1.0f, 1.0f, polygon));
+	polygon->Push_Back(new Edge(4.0f, 1.0f, polygon));
+	polygon->Push_Back(new Edge(4.0f, 5.0f, polygon));
+	polygon->Push_Back(new Edge(-3.0f, 5.0f, polygon));
+	polygon->Push_Back(new Edge(-3.0f, 0.0f, polygon));
+	polygon->Push_Back(new Edge(-4.0f, 0.0f, polygon));
+	polygon->Push_Back(new Edge(-4.0f, 5.0f, polygon));
+	polygon->Push_Back(new Edge(-10.0f, 5.0f, polygon));
+	polygon->Push_Back(new Edge(-10.0f, 1.0f, polygon));
+	polygon->Push_Back(new Edge(-6.0f, 1.0f, polygon));
+	polygon->Push_Back(new Edge(-6.0f, 0.0f, polygon));
+	polygon->Push_Back(new Edge(-10.0f, 0.0f, polygon));
 }
 
 void RotatePolygon() {
@@ -70,16 +75,16 @@ void SetVertexType() {
 	int key = 0;
 	do {
 		if (iter->prev->origin->y < iter->origin->y && iter->next->origin->y < iter->origin->y) {
-			if (iter->prev->origin->x < iter->next->origin->x) {
+			if (iter->prev->origin->x > iter->next->origin->x) {
 				iter->origin->type = START;
-			} else if (iter->prev->origin->x > iter->next->origin->x) {
+			} else if (iter->prev->origin->x < iter->next->origin->x) {
 				iter->origin->type = SPLIT;
 			}
 		}else if(iter->prev->origin->y > iter->origin->y && iter->next->origin->y > iter->origin->y) {
-			if (iter->prev->origin->x < iter->next->origin->x) {
+			if (iter->prev->origin->x > iter->next->origin->x) {
 				iter->origin->type = MERGE;
 			}
-			else if (iter->prev->origin->x > iter->next->origin->x) {
+			else if (iter->prev->origin->x < iter->next->origin->x) {
 				iter->origin->type = END;
 			}
 		}
@@ -139,17 +144,141 @@ void PrintVerticesQueue() {
 	}
 }
 
-void HandleStartVertex(Vertex *_vertex) {
-	binarySearchTree.insert(_vertex->incidentEdge);
+void InsertToFakeTree(Edge *_edge, Vertex *_helper) {
+	Node *node = new Node();
+	node->edge = _edge;
+	node->helper = _helper;
+	if (fakeTree.empty())fakeTree.push_back(node);
+	else {
+		for (int i = 0; i < fakeTree.size(); i++) {
+			if (i == fakeTree.size() - 1) {
+				if (_edge->origin->x >= fakeTree[i]->edge->origin->x) fakeTree.push_back(node);
+				else fakeTree.insert(fakeTree.begin() + i, node);
+				break;
+			}else if (_edge->origin->x <= fakeTree[i]->edge->origin->x) {
+				std::cout << _edge->origin->x << fakeTree[i]->edge->origin->x;
+				fakeTree.insert(fakeTree.begin() + i, node);
+				break;
+			}
+		}
+	}
 }
 
-void HandleEndVertex(Vertex *_vertex) {}
+Node *DirectLeft(Vertex *_helper) {
+	for (int i = fakeTree.size()-1; i >= 0; i--) {
+		if (i == 0) {
+			return fakeTree[i];
+			break;
+		}
+		else if (_helper->x >= fakeTree[i]->edge->origin->x) {
+			return fakeTree[i];
+			break;
+		}
+	}
 
-void HandleSplitVertex(Vertex *_vertex) {}
+}
 
-void HandleMergeVertex(Vertex *_vertex) {}
+Node *SearchNode(Edge *_edge) {
+	for (int i = 0; i < fakeTree.size(); i++) {
+		if (fakeTree[i]->edge == _edge) {
+			return fakeTree[i];
+		}
+	}
+}
 
-void HandleRegularVertex(Vertex *_vertex) {}
+void DeleteEdge(Edge *_edge) {
+	for (int i = 0; i < fakeTree.size(); i++) {
+		if (fakeTree[i]->edge == _edge) {
+			fakeTree.erase(fakeTree.begin() + i);
+			break;
+		}
+	}
+}
+
+void InsertSplitter(Vertex *_source, Edge *_target) {
+	splitterSource.push_back(_source);
+	splitterTarget.push_back(_target);
+}
+
+void SplitPolygon(Vertex *_source, Edge *_target) {
+	Polygon *oldPolygon = _target->incidentFace;
+	Polygon *newPolygon = new Polygon();
+	Edge *sourceEdge = new Edge(_source, newPolygon);
+	Edge *sourceTwin = new Edge(_target->origin, oldPolygon);
+	sourceTwin->prev = _target->prev;
+	_target->prev->next = sourceTwin;
+	sourceTwin->next = _source->incidentEdge->prev->next;
+
+	sourceEdge->next = _target;
+	sourceEdge->prev = _source->incidentEdge->prev;
+	_target->prev = sourceEdge;
+	sourceEdge->prev->next = sourceEdge;
+	newPolygon->edges = sourceEdge;
+
+	sourceEdge->origin->incidentEdge = sourceEdge;
+	sourceTwin->origin->incidentEdge = sourceTwin;
+
+	Edge *temp = sourceEdge;
+	do {
+		if (temp == oldPolygon->edges) edges = sourceTwin;
+		temp->incidentFace = newPolygon;
+		temp = temp->next;
+	} while (temp != sourceEdge);
+
+	newPolygon->edges = sourceEdge;
+	monotones.push_back(newPolygon);
+}
+
+void HandleStartVertex(Vertex *_vertex) {
+	InsertToFakeTree(_vertex->incidentEdge, _vertex);
+}
+
+void HandleEndVertex(Vertex *_vertex) {
+	Vertex *prevHelper = SearchNode(_vertex->incidentEdge->prev)->helper;
+	if (prevHelper->type == MERGE) {
+		InsertSplitter(_vertex, prevHelper->incidentEdge);
+	}
+	DeleteEdge(_vertex->incidentEdge->prev);
+}
+
+void HandleSplitVertex(Vertex *_vertex) {
+	Node *left = DirectLeft(_vertex);
+	InsertSplitter(_vertex, left->helper->incidentEdge);
+	left->helper = _vertex;
+	InsertToFakeTree(_vertex->incidentEdge, _vertex);
+}
+
+void HandleMergeVertex(Vertex *_vertex) {
+	Vertex *prevHelper = SearchNode(_vertex->incidentEdge->prev)->helper;
+	if (SearchNode(_vertex->incidentEdge->prev)->helper->type == MERGE) {
+		InsertSplitter(_vertex, prevHelper->incidentEdge);
+	}
+	DeleteEdge(_vertex->incidentEdge->prev);
+	Node *left = DirectLeft(_vertex);
+	Vertex *helper = SearchNode(left->edge)->helper;
+	if (helper->type == MERGE) {
+		InsertSplitter(_vertex, helper->incidentEdge);
+	}
+	left->helper = _vertex;
+}
+
+void HandleRegularVertex(Vertex *_vertex) {
+	if (_vertex->y > _vertex->incidentEdge->next->origin->y) {
+		Vertex *prevHelper = SearchNode(_vertex->incidentEdge->prev)->helper;
+		if (prevHelper->type == MERGE) {
+			InsertSplitter(_vertex,prevHelper->incidentEdge);
+		}
+		DeleteEdge(SearchNode(_vertex->incidentEdge->prev)->edge);
+		InsertToFakeTree(_vertex->incidentEdge, _vertex);
+	}
+	else {
+		Node *left = DirectLeft(_vertex);
+		if (left->helper->type == MERGE) {
+			InsertSplitter(_vertex, left->helper->incidentEdge);
+		}
+		left->helper = _vertex;
+	}
+}
 
 void MakeMonotone() {
 	while (!verticesQueue.empty()) {
@@ -172,9 +301,14 @@ void MakeMonotone() {
 			HandleRegularVertex(temp);
 			break;
 		};
+		for (int i = 0; i < fakeTree.size(); i++) {
+			std::cout << "(" << fakeTree[i]->edge->key << ", " << fakeTree[i]->helper->key << ") ";
+		}
+		std::cout << std::endl;
 		verticesQueue.pop();
 	};
 }
+
 
 int main(int argc, char **argv)
 {
@@ -185,9 +319,16 @@ int main(int argc, char **argv)
 	
 	RotatePolygon();
 	SetVertexType();
-	polygon->Print();
+	//PrintVerticesType();
+	//polygon->Print();
 	
 	InitVerticesQueue();
+
+	MakeMonotone();
+
+	//for (int i = 0; i < splitterSource.size(); i++) {
+		//SplitPolygon(splitterSource[i], splitterTarget[i]);
+	//}
 	
 	if (window->initiated) {
 		window->ClearWindow();
@@ -196,10 +337,13 @@ int main(int argc, char **argv)
 			PrintLine(iter);
 			iter = iter->next;
 		} while (iter != polygon->Start());
+		for (int i = 0; i < splitterSource.size(); i++) {
+			Edge *temp = new Edge(splitterSource[i], new Polygon());
+			temp->next = splitterTarget[i];
+			PrintLine(temp);
+		}
 		window->SwapWindow();
 	}
-
-	MakeMonotone();
 
 	while (true) {};
     return 0;
