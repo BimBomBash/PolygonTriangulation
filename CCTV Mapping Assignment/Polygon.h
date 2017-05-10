@@ -3,6 +3,7 @@ struct Edge;
 struct Polygon;
 
 enum VertexType {START, END, SPLIT, MERGE, REGULAR};
+enum TriangleVertexColor {BLACK, GREY, WHITE};
 
 struct Vertex {
 	Vertex(float _x, float _y, Edge *_incidentEdge);
@@ -11,6 +12,7 @@ struct Vertex {
 	void Print();
 	VertexType type;
 	int key;
+	TriangleVertexColor cctvColor;
 };
 
 struct Edge {

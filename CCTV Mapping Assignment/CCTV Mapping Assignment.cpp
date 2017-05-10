@@ -1,6 +1,8 @@
 // CCTV Mapping Assignment.cpp : Defines the entry point for the console application.
 //
 
+
+/*CHANGE TRIANGULATOR FROM USING VERTICES TO EDGES!!!!!!*/
 #include "stdafx.h"
 #include <GL/glew.h>
 #include <SDL.h>
@@ -12,10 +14,11 @@
 #include "BinarySearchTree.h"
 #include <queue>
 #include <vector>
+#include <stack>
 
 const double PI = 3.1415926535897932384626433832795;
 const float scale = 10.0f;
-const float rotation = 30.0f;
+const float rotation = 45.0f;
 Edge *edges;
 Polygon *polygon;
 Window *window;
@@ -280,47 +283,149 @@ void MakeMonotone() {
 	};
 }
 
-void InsertPolygon(Polygon *polygon) {
+void InsertPolygon(Polygon *_polygon) {
 	for (int i = 0; i < monotones.size(); i++) {
-		if (monotones[i] == polygon) return;
+		if (monotones[i] == _polygon) return;
 	}
-	monotones.push_back(polygon);
+	monotones.push_back(_polygon);
 }
 
-void PolygonSplitter(Vertex *_source, Edge *_target) {
+void PolygonSplitter(Polygon * oldPolygon, Vertex *_source, Edge *_target) {
 	Polygon *newPolygon = new Polygon();
-	Edge *sourceEdge = new Edge(_source, polygon);
+	Edge *cache = _source->incidentEdge;
+
+	Edge *sourceEdge = new Edge(_source, oldPolygon);
 	Edge *sourceTwin = new Edge(_target->origin, newPolygon);
-	sourceTwin->prev = _target->prev;
-	_target->prev->next = sourceTwin;
-	sourceTwin->next = _source->incidentEdge->prev->next;
 
 	sourceEdge->next = _target;
+	sourceTwin->next = _source->incidentEdge;
 	sourceEdge->prev = _source->incidentEdge->prev;
-	_target->prev = sourceEdge;
+	sourceTwin->prev = _target->prev;
+	
+	sourceEdge->next->prev = sourceEdge;
 	sourceEdge->prev->next = sourceEdge;
-	newPolygon->edges = sourceEdge;
+	sourceTwin->next->prev = sourceTwin;
+	sourceTwin->prev->next = sourceTwin;
 
-	sourceEdge->origin->incidentEdge = sourceEdge;
+	_source->incidentEdge = sourceEdge;
 	sourceTwin->origin->incidentEdge = sourceTwin;
+	
+	
+	if (sourceEdge->next->key > sourceEdge->prev->key) {
+		oldPolygon->edges = sourceEdge;
+		newPolygon->edges = sourceTwin;
+	}
+	else {
+		oldPolygon->edges = sourceTwin;
+		newPolygon->edges = sourceEdge;
+	}
 
-	Edge *temp = sourceTwin;
-	do {
-		if (temp == polygon->edges) polygon->edges = sourceEdge;
-		temp->incidentFace = newPolygon;
-		temp = temp->next;
-	} while (temp != sourceTwin);
-
-	newPolygon->edges = sourceTwin;
+	sourceEdge->twinEdge = sourceTwin;
+	sourceTwin->twinEdge = sourceEdge;
 	InsertPolygon(newPolygon);
 }
 
-void SplitPolygon() {
+void SplitPolygon(Polygon *oldPolygon) {
+	int i = 0;
 	for (int i = 0; i < splitterSource.size(); i++) {
-		splitterSource[i]->Print();
-		PolygonSplitter(splitterSource[i], splitterTarget[i]);
+		PolygonSplitter(oldPolygon,splitterSource[i], splitterTarget[i]);
 	}
-	InsertPolygon(polygon);
+	InsertPolygon(oldPolygon);
+	splitterSource.clear();
+	splitterTarget.clear();
+}
+
+bool DifferentChain(Edge * a, Edge *b) {
+	if (a->next->origin->y > a->origin->y && b->next->origin->y < b->origin->y)return true;
+	else if (a->next->origin->y < a->origin->y && b->next->origin->y > b->origin->y) return true;
+	else 
+		return false;
+}
+
+bool DiagonalIsInsidePolygon(Edge * a, Edge *b) {
+	float v1[2]{ a->next->origin->x - a->origin->x, a->next->origin->y - a->origin->y };
+	float v2[2]{ a->prev->origin->x - a->origin->x, a->prev->origin->y - a->origin->y };
+	float v3[2]{ b->origin->x - a->origin->x, b->origin->y - a->origin->y };
+	float crossProduct[3]{ v1[1] * v2[2] - v1[2] * v2[1], v1[1] * v3[2] - v1[2] * v3[1], v3[1] * v2[2] - v3[2] * v2[1] };
+
+	int trueCheck = 0;
+	for (int i = 0; i < 3; i++) {
+		if (crossProduct[i] >= 0) trueCheck++;
+	}
+	if (trueCheck == 3 || trueCheck == 0) {
+		std::cout <<std::endl<< "THIS DIAGONAL IS INSIDE POLYGON:" << std::endl;
+		a->Print();
+		b->Print();
+		std::cout << "==================================" << std::endl;
+	}
+	if (trueCheck == 3 || trueCheck == 0) return true;
+	else return false;
+}
+
+std::vector<Edge *> checkEdges;
+std::vector<Edge*> tempEdges;
+void Triangulate(Polygon * _polygon) {
+	Edge *iter = _polygon->edges;
+	tempEdges.clear();
+	do {
+		if (tempEdges.empty())tempEdges.push_back(iter);
+		else {
+			for (int n = 0; n < tempEdges.size(); n++) {
+				if (iter->origin->y >= tempEdges[n]->origin->y) { 
+					tempEdges.insert(tempEdges.begin() + n, iter);
+					break; 
+				}
+				else if (n == tempEdges.size() - 1 && iter->origin->y < tempEdges[n]->origin->y) tempEdges.push_back(iter);
+			}
+		}
+		iter = iter->next;
+	} while (iter != _polygon->Start());
+
+	if (tempEdges.size() > 3) {
+		std::stack<Edge *>triangulationEdges;
+		triangulationEdges.push(tempEdges[0]);
+		triangulationEdges.push(tempEdges[1]);
+
+		for (int i = 2; i < tempEdges.size() - 1; i++){
+			if (DifferentChain(tempEdges[i], triangulationEdges.top())) {
+				while (triangulationEdges.size() > 1) {
+					//InsertSplitter(tempVertex[i], triangulationVertex.top()->incidentEdge);
+					Edge *temp = new Edge (tempEdges[i]->origin, nullptr);
+					temp->next = triangulationEdges.top();
+					checkEdges.push_back(temp);
+					triangulationEdges.pop();
+				}
+				triangulationEdges.push(tempEdges[i-1]);
+				triangulationEdges.push(tempEdges[i]);
+			}
+			else {
+				//HOW THE FUCK DO I KNOW THAT THE DIAGONAL IS INSIDE OF POLYGON!?
+				Edge * lastPopped = triangulationEdges.top();
+				if (triangulationEdges.empty())std::cout << "ABIS";
+				triangulationEdges.pop();
+				//triangulationEdges.top()->Print();
+				while (!triangulationEdges.empty() && DiagonalIsInsidePolygon(tempEdges[i], triangulationEdges.top())) {
+					std::cout << "SPLITTED";
+					lastPopped = triangulationEdges.top();
+					//InsertSplitter(tempVertex[i], triangulationVertex.top()->incidentEdge);
+					Edge *temp = new Edge(tempEdges[i]->origin, nullptr);
+					temp->next = triangulationEdges.top();
+					checkEdges.push_back(temp);
+					triangulationEdges.pop();
+				}
+				triangulationEdges.push(lastPopped);
+				triangulationEdges.push(tempEdges[i]);
+			}
+		}
+
+		triangulationEdges.pop();
+		while (triangulationEdges.size() > 1) {
+			InsertSplitter(tempEdges[tempEdges.size()-1]->origin, triangulationEdges.top());
+			triangulationEdges.pop();
+		}
+
+		//SplitPolygon(_polygon);
+	}
 }
 
 int main(int argc, char **argv)
@@ -334,7 +439,10 @@ int main(int argc, char **argv)
 	SetVertexType();
 	InitVerticesQueue();
 	MakeMonotone();
-	SplitPolygon();
+	SplitPolygon(polygon);
+
+	int monotonesNumber = monotones.size();
+	for (int i = 0; i < monotones.size();i++) Triangulate(monotones[i]);
 
 	if (window->initiated) {
 		window->ClearWindow();
@@ -344,16 +452,11 @@ int main(int argc, char **argv)
 				PrintLine(iter);
 				iter = iter->next;
 			} while (iter != monotones[i]->Start());
-			/*for (int i = 0; i < splitterSource.size(); i++) {
-				Edge *temp = new Edge(splitterSource[i], new Polygon());
-				temp->next = splitterTarget[i];
-				PrintLine(temp);
-			}*/
 		}
-		window->SwapWindow();
-	}
 
-	std::cout << monotones.size();
+		for (int j = 0; j < checkEdges.size(); j++)PrintLine(checkEdges[j]);
+	}
+	window->SwapWindow();
 
 	while (true) {};
     return 0;
