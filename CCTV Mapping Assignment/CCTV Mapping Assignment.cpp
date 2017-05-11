@@ -1,8 +1,6 @@
 // CCTV Mapping Assignment.cpp : Defines the entry point for the console application.
 //
 
-
-/*CHANGE TRIANGULATOR FROM USING VERTICES TO EDGES!!!!!!*/
 #include "stdafx.h"
 #include <GL/glew.h>
 #include <SDL.h>
@@ -395,13 +393,14 @@ void Triangulate(Polygon * _polygon) {
 					checkEdges.push_back(temp);
 					triangulationEdges.pop();
 				}
+				triangulationEdges.pop();
+				if (triangulationEdges.empty())std::cout << "ABIS";
 				triangulationEdges.push(tempEdges[i-1]);
 				triangulationEdges.push(tempEdges[i]);
 			}
 			else {
 				//HOW THE FUCK DO I KNOW THAT THE DIAGONAL IS INSIDE OF POLYGON!?
 				Edge * lastPopped = triangulationEdges.top();
-				if (triangulationEdges.empty())std::cout << "ABIS";
 				triangulationEdges.pop();
 				//triangulationEdges.top()->Print();
 				while (!triangulationEdges.empty() && DiagonalIsInsidePolygon(tempEdges[i], triangulationEdges.top())) {
@@ -413,7 +412,7 @@ void Triangulate(Polygon * _polygon) {
 					checkEdges.push_back(temp);
 					triangulationEdges.pop();
 				}
-				triangulationEdges.push(lastPopped);
+				if (lastPopped!=nullptr)triangulationEdges.push(lastPopped);
 				triangulationEdges.push(tempEdges[i]);
 			}
 		}
@@ -430,7 +429,7 @@ void Triangulate(Polygon * _polygon) {
 
 int main(int argc, char **argv)
 {
-	window = new Window("CCTV", 600, 400);
+	window = new Window("CCTV", 900, 600);
 
 	InitPolygon();
 	if (polygon->edges == nullptr)printf("NULLPTR");
