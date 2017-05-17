@@ -54,8 +54,10 @@ struct OrderByVerticesY
 
 struct TriangulationNode {
 	Edge *edge;
-	int RightLeft;
+	TriangulationNode *next;
+	int leftRight;
 	TriangulationNode();
+	TriangulationNode(Edge *_edge);
 };
 
 

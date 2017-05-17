@@ -90,3 +90,9 @@ void Vertex::Print()
 TriangulationNode::TriangulationNode()
 {
 }
+
+TriangulationNode::TriangulationNode(Edge * _edge)
+{
+	edge = _edge;
+	next = nullptr;
+}
