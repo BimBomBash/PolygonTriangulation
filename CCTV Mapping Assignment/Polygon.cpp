@@ -86,3 +86,7 @@ void Vertex::Print()
 {
 	std::cout << "(" << x << ", " << y << ")"<<std::endl;
 }
+
+TriangulationNode::TriangulationNode()
+{
+}

@@ -52,4 +52,10 @@ struct OrderByVerticesY
 	}
 };
 
+struct TriangulationNode {
+	Edge *edge;
+	int RightLeft;
+	TriangulationNode();
+};
+
 

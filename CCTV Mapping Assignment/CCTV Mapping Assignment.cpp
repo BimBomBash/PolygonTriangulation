@@ -18,7 +18,7 @@
 
 const double PI = 3.1415926535897932384626433832795;
 const float scale = 10.0f;
-const float rotation = 45.0f;
+const float rotation = 0.0f;
 Edge *edges;
 Polygon *polygon;
 Window *window;
@@ -33,7 +33,7 @@ std::vector<Polygon*> monotones;
 void InitPolygon() {
 	polygon = new Polygon(edges);
 
-	polygon->Push_Back(new Edge(-10.0f, -4.0f, polygon));
+	/*polygon->Push_Back(new Edge(-10.0f, -4.0f, polygon));
 	polygon->Push_Back(new Edge(-7.0f, -4.0f, polygon));
 	polygon->Push_Back(new Edge(-7.0f, -2.0f, polygon));
 	polygon->Push_Back(new Edge(-6.0f, -2.0f, polygon));
@@ -59,6 +59,44 @@ void InitPolygon() {
 	polygon->Push_Back(new Edge(-6.0f, 1.0f, polygon));
 	polygon->Push_Back(new Edge(-6.0f, 0.0f, polygon));
 	polygon->Push_Back(new Edge(-10.0f, 0.0f, polygon));
+	*/
+
+	/*polygon->Push_Back(new Edge(-10.0f, -4.0f, polygon));
+	polygon->Push_Back(new Edge(-7.0f, -4.0f, polygon));
+	polygon->Push_Back(new Edge(-6.5f, -2.0f, polygon));
+	polygon->Push_Back(new Edge(-6.0f, -5.0f, polygon));
+	polygon->Push_Back(new Edge(2.0f, -5.0f, polygon));
+	polygon->Push_Back(new Edge(2.0f, -4.0f, polygon));
+	polygon->Push_Back(new Edge(5.0f, -4.0f, polygon));
+	polygon->Push_Back(new Edge(5.0f, -5.0f, polygon));
+	polygon->Push_Back(new Edge(10.0f, -5.0f, polygon));
+	polygon->Push_Back(new Edge(10.0f, 5.0f, polygon));
+	polygon->Push_Back(new Edge(5.0f, 5.0f, polygon));
+	polygon->Push_Back(new Edge(5.0f, 0.0f, polygon));
+	polygon->Push_Back(new Edge(-1.0f, 0.0f, polygon));
+	polygon->Push_Back(new Edge(4.0f, 1.0f, polygon));
+	polygon->Push_Back(new Edge(4.0f, 5.0f, polygon));
+	polygon->Push_Back(new Edge(-3.0f, 5.0f, polygon));
+	polygon->Push_Back(new Edge(-4.0f, 0.0f, polygon));
+	polygon->Push_Back(new Edge(-4.0f, 5.0f, polygon));
+	polygon->Push_Back(new Edge(-10.0f, 5.0f, polygon));
+	polygon->Push_Back(new Edge(-10.0f, 1.0f, polygon));
+	polygon->Push_Back(new Edge(-6.5f, 0.5f, polygon));
+	polygon->Push_Back(new Edge(-10.0f, 0.0f, polygon));*/
+
+
+	polygon->Push_Back(new Edge(3, 4, polygon));
+	polygon->Push_Back(new Edge(2, 3, polygon));
+	polygon->Push_Back(new Edge(1, 4, polygon));
+	polygon->Push_Back(new Edge(0, 2, polygon));
+	polygon->Push_Back(new Edge(2, 0, polygon));
+	polygon->Push_Back(new Edge(4, 1.5f, polygon));
+	polygon->Push_Back(new Edge(6, 0, polygon));
+	polygon->Push_Back(new Edge(7, 4, polygon));
+	polygon->Push_Back(new Edge(6, 7, polygon));
+	polygon->Push_Back(new Edge(4, 5, polygon));
+	polygon->Push_Back(new Edge(2, 7, polygon));
+	polygon->Push_Back(new Edge(0, 6, polygon));
 }
 
 void RotatePolygon() {
@@ -337,7 +375,9 @@ void SplitPolygon(Polygon *oldPolygon) {
 
 bool DifferentChain(Edge * a, Edge *b) {
 	if (a->next->origin->y > a->origin->y && b->next->origin->y < b->origin->y)return true;
+	//else if (a->next->origin->y > a->origin->y && b->next->origin->y <= b->origin->y)return true;
 	else if (a->next->origin->y < a->origin->y && b->next->origin->y > b->origin->y) return true;
+	//else if (a->next->origin->y < a->origin->y && b->next->origin->y >= b->origin->y) return true;
 	else 
 		return false;
 }
@@ -362,24 +402,46 @@ bool DiagonalIsInsidePolygon(Edge * a, Edge *b) {
 	else return false;
 }
 
-std::vector<Edge *> checkEdges;
+bool PossibleFunnel(std::stack<Edge *> &stack, Edge *edge1, Edge *edge2) {
+	edge1->origin->Print();
+	edge2->origin->Print();
+	if (!stack.empty() ) 
+		if (DiagonalIsInsidePolygon(edge1, edge2)||DifferentChain(edge1, edge2))return true;
+	else return false;
+}
+
+std::vector<Edge*> checkEdges;
 std::vector<Edge*> tempEdges;
-void Triangulate(Polygon * _polygon) {
+std::vector<int> rightLeft;
+
+void SortUpBottom(Polygon *_polygon) {
 	Edge *iter = _polygon->edges;
 	tempEdges.clear();
 	do {
 		if (tempEdges.empty())tempEdges.push_back(iter);
 		else {
 			for (int n = 0; n < tempEdges.size(); n++) {
-				if (iter->origin->y >= tempEdges[n]->origin->y) { 
-					tempEdges.insert(tempEdges.begin() + n, iter);
-					break; 
+				if (iter->origin->y >= tempEdges[n]->origin->y) {
+					if (iter->origin->y == tempEdges[n]->origin->y)
+					{
+						if (iter->origin->x <= tempEdges[n]->origin->x) tempEdges.insert(tempEdges.begin() + n, iter);
+						else tempEdges.insert(tempEdges.begin() + n + 1, iter);
+					}
+					else {
+						tempEdges.insert(tempEdges.begin() + n, iter);
+					}
+					break;
 				}
 				else if (n == tempEdges.size() - 1 && iter->origin->y < tempEdges[n]->origin->y) tempEdges.push_back(iter);
 			}
 		}
 		iter = iter->next;
 	} while (iter != _polygon->Start());
+}
+
+void Triangulate(Polygon * _polygon) {
+
+	SortUpBottom(_polygon);
 
 	if (tempEdges.size() > 3) {
 		std::stack<Edge *>triangulationEdges;
@@ -387,11 +449,14 @@ void Triangulate(Polygon * _polygon) {
 		triangulationEdges.push(tempEdges[1]);
 
 		for (int i = 2; i < tempEdges.size() - 1; i++){
+			std::cout << "Coordinate: " << tempEdges[i]->origin->x << ", " << tempEdges[i]->origin->y<<std::endl;
 			if (DifferentChain(tempEdges[i], triangulationEdges.top())) {
-				while (triangulationEdges.size() > 1) {
+				while (triangulationEdges.size() > 1 && DifferentChain(tempEdges[i], triangulationEdges.top())) {
 					//InsertSplitter(tempVertex[i], triangulationVertex.top()->incidentEdge);
 					Edge *temp = new Edge (tempEdges[i]->origin, nullptr);
 					temp->next = triangulationEdges.top();
+					std:: cout << "Different chains: " << tempEdges[i]->origin->x << ", " << tempEdges[i]->origin->y <<
+						" And " << triangulationEdges.top()->origin->x << ", " << triangulationEdges.top()->origin->y<<std::endl;
 					checkEdges.push_back(temp);
 					triangulationEdges.pop();
 				}
@@ -404,7 +469,8 @@ void Triangulate(Polygon * _polygon) {
 				if (triangulationEdges.empty())std::cout << "ABIS";
 				triangulationEdges.pop();
 				//triangulationEdges.top()->Print();
-				while (!triangulationEdges.empty() && DiagonalIsInsidePolygon(tempEdges[i], triangulationEdges.top())) {
+				if (!DiagonalIsInsidePolygon(tempEdges[i], triangulationEdges.top())) std::cout << "BANGSAAAAAAAAAT"<<std::endl;
+				while (PossibleFunnel(triangulationEdges, tempEdges[i], triangulationEdges.top())) {
 					std::cout << "SPLITTED";
 					lastPopped = triangulationEdges.top();
 					//InsertSplitter(tempVertex[i], triangulationVertex.top()->incidentEdge);
@@ -420,7 +486,7 @@ void Triangulate(Polygon * _polygon) {
 
 		triangulationEdges.pop();
 		while (triangulationEdges.size() > 1) {
-			InsertSplitter(tempEdges[tempEdges.size()-1]->origin, triangulationEdges.top());
+			if (DiagonalIsInsidePolygon(tempEdges[tempEdges.size() - 1], triangulationEdges.top()))InsertSplitter(tempEdges[tempEdges.size()-1]->origin, triangulationEdges.top());
 			triangulationEdges.pop();
 		}
 
@@ -441,18 +507,21 @@ int main(int argc, char **argv)
 	MakeMonotone();
 	SplitPolygon(polygon);
 
+	int i = 3;
+
 	int monotonesNumber = monotones.size();
-	for (int i = 0; i < monotones.size();i++) Triangulate(monotones[i]);
+	//for (int i = 0; i < monotones.size();i++) 
+	Triangulate(monotones[i]);
 
 	if (window->initiated) {
 		window->ClearWindow();
-		for (int i = 0; i < monotones.size(); i++) {
+		//for (int i = 0; i < monotones.size(); i++) {
 			Edge *iter = monotones[i]->edges;
 			do {
 				PrintLine(iter);
 				iter = iter->next;
 			} while (iter != monotones[i]->Start());
-		}
+		//}
 
 		for (int j = 0; j < checkEdges.size(); j++)PrintLine(checkEdges[j]);
 	}
